@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <set>
 #include <stack>
+#include <queue>  // For BFS
 
 using namespace std;
 
@@ -165,6 +166,56 @@ public:
         for (T fof : friendsOfFriends) {
             cout << fof << ", ";
         }
+        cout << endl;
+    }
+
+    void bfs(T start) {
+        if (adjList.find(start) == adjList.end()) {
+            cout << "User not found in the graph." << endl;
+            return;
+        }
+
+        set<T> visited;
+        queue<T> q;
+        q.push(start);
+        visited.insert(start);
+
+        cout << "BFS Traversal starting from " << start << ": ";
+        while (!q.empty()) {
+            T node = q.front();
+            q.pop();
+            cout << node << " ";
+
+            for (T neighbor : adjList[node]) {
+                if (visited.find(neighbor) == visited.end()) {
+                    q.push(neighbor);
+                    visited.insert(neighbor);
+                }
+            }
+        }
+        cout << endl;
+    }
+
+    void dfsUtil(T node, set<T>& visited) {
+        visited.insert(node);
+        cout << node << " ";
+
+        for (T neighbor : adjList[node]) {
+            if (visited.find(neighbor) == visited.end()) {
+                dfsUtil(neighbor, visited);
+            }
+        }
+    }
+
+    void dfs(T start) {
+        if (adjList.find(start) == adjList.end()) {
+            cout << "User not found in the graph." << endl;
+            return;
+        }
+
+        set<T> visited;
+        cout << "DFS Traversal starting from " << start << ": ";
+        dfsUtil(start, visited);
         cout << endl;
     }
 
@@ -352,6 +403,22 @@ public:
         loggedInUser->showAllLifeEvents();
     }
 
+    void traverseFriendsBFS() {
+        if (!loggedInUser) {
+            cout << "You need to log in first!" << endl;
+            return;
+        }
+        friendships.bfs(*loggedInUser);
+    }
+
+    void traverseFriendsDFS() {
+        if (!loggedInUser) {
+            cout << "You need to log in first!" << endl;
+            return;
+        }
+        friendships.dfs(*loggedInUser);
+    }
+
     void saveUsers() const {
         ofstream outFile(userFileName);
         for (const auto& pair : users) {
@@ -388,7 +455,7 @@ int main() {
         if (!isLoggedIn) {
             cout << "1. Register\n2. Login\n3. Exit\nChoose an option: ";
         } else {
-            cout << "1. Add Friend\n2. Show Friends\n3. Show Friends of Friends\n4. Add Life Event\n5. Delete Life Event\n6. Show Life Events\n7. Logout\nChoose an option: ";
+            cout << "1. Add Friend\n2. Show Friends\n3. Show Friends of Friends\n4. Add Life Event\n5. Delete Life Event\n6. Show Life Events\n7. BFS Friends Traversal\n8. DFS Friends Traversal\n9. Logout\nChoose an option: ";
         }
         cin >> choice;
 
@@ -426,6 +493,12 @@ int main() {
                 smn.showMyLifeEvents();
                 break;
             case 7:
+                smn.traverseFriendsBFS();
+                break;
+            case 8:
+                smn.traverseFriendsDFS();
+                break;
+            case 9:
                 isLoggedIn = false;
                 break;
             default:
