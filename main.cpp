@@ -96,6 +96,52 @@ public:
         }
         cout << endl;
     }
+
+    void saveAdjList(const string& fileName) {
+        ofstream outFile(fileName);
+        for (const auto& pair : adjList) {
+            outFile << pair.first.emailID << ":";
+            for (const auto& friendUser : pair.second) {
+                outFile << friendUser.emailID << ",";
+            }
+            outFile << endl;
+        }
+        outFile.close();
+    }
+
+    void loadAdjList(const string& fileName, const map<string, UserType>& users) {
+        ifstream inFile(fileName);
+        if (!inFile) {
+            cout << "No existing friend data found. Starting fresh." << endl;
+            return;
+        }
+
+        string line;
+        while (getline(inFile, line)) {
+            size_t pos = line.find(':');
+            if (pos == string::npos) continue;
+
+            string userEmail = line.substr(0, pos);
+            string friendsStr = line.substr(pos + 1);
+
+            if (users.find(userEmail) != users.end()) {
+                UserType user = users.at(userEmail);
+                size_t start = 0;
+                size_t end = friendsStr.find(',');
+
+                while (end != string::npos) {
+                    string friendEmail = friendsStr.substr(start, end - start);
+                    if (users.find(friendEmail) != users.end()) {
+                        UserType friendUser = users.at(friendEmail);
+                        adjList[user].push_back(friendUser);
+                    }
+                    start = end + 1;
+                    end = friendsStr.find(',', start);
+                }
+            }
+        }
+        inFile.close();
+    }
 };
 
 class SocialMediaNetwork {
@@ -103,14 +149,21 @@ class SocialMediaNetwork {
     Graph<UserType> friendships;
     UserType* loggedInUser = nullptr;
     const string userFileName = "users.txt";
+    const string friendsFileName = "friends.txt";
 
 public:
+    void showLoggedUserName(){
+        cout << loggedInUser;
+    }
+
     SocialMediaNetwork() {
         loadUsers();
+        friendships.loadAdjList(friendsFileName, users);
     }
 
     ~SocialMediaNetwork() {
         saveUsers();
+        friendships.saveAdjList(friendsFileName);
     }
 
     void registerUser() {
@@ -138,7 +191,7 @@ public:
         saveUsers();
     }
 
-    void loginUser() {
+    string loginUser(string userMail) {
         string email, password;
         cin.ignore(); // Clear any previous input
         cout << "Enter email: ";
@@ -152,6 +205,8 @@ public:
         } else {
             cout << "Invalid email or password!" << endl;
         }
+        userMail = email;
+        return userMail;
     }
 
     void addFriend() {
@@ -226,9 +281,36 @@ private:
 int main() {
     SocialMediaNetwork network;
     int choice;
+    bool login = false;
+    string userMail = "";
+    while (!login) {
+        cout << "***************************************" << endl;
+        cout << "|1. Register\n|2. Login \n|3. Exit\n" ;
+        cout << "***************************************"  << endl;
+        cout << "Enter your choice: ";
+        cin >> choice;
+
+        switch (choice) {
+            case 1:
+                cout << "Great! Sign Up Now:";
+                network.registerUser();
+                break;
+            case 2:
+                cout << "Great! Log In Now:";
+                network.loginUser(userMail);
+                login = true;
+                break;
+            case 3:
+                return 0;
+            default:
+                cout << "Invalid choice. Try again." << endl;
+        }
+    }
 
     while (true) {
-        cout << "1. Register\n2. Login\n3. Add Friend\n4. Show My Friends\n5. Show Friends of My Friends\n6. Exit\n";
+        cout << "Welcome " << userMail;
+
+        cout << "\n3. Add Friend\n4. Show My Friends\n5. Show Friends of My Friends\n6. Exit\n";
         cout << "Enter your choice: ";
         cin >> choice;
 
@@ -237,7 +319,7 @@ int main() {
                 network.registerUser();
                 break;
             case 2:
-                network.loginUser();
+                network.loginUser(userMail);
                 break;
             case 3:
                 network.addFriend();
