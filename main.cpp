@@ -6,6 +6,7 @@
 #include <vector>
 #include <algorithm>
 #include <set>
+#include <stack>
 
 using namespace std;
 
@@ -16,6 +17,7 @@ public:
     string emailID;
     string password;
     string DOB;
+    stack<string> myLifeEvents;
 
     UserType() {
         name = "Unknown";
@@ -44,9 +46,78 @@ public:
     bool operator!=(const UserType& other) const {
         return !(*this == other);
     }
+
+    void addLifeEvent(const string& event) {
+        myLifeEvents.push(event);
+    }
+
+    void deleteLifeEvent() {
+        if (!myLifeEvents.empty()) {
+            myLifeEvents.pop();
+        } else {
+            cout << "No life events to delete." << endl;
+        }
+    }
+
+    string getRecentLifeEvent() const {
+        if (!myLifeEvents.empty()) {
+            return myLifeEvents.top();
+        } else {
+            return "No life events available.";
+        }
+    }
+
+    void showAllLifeEvents() const {
+        if (myLifeEvents.empty()) {
+            cout << "No life events available." << endl;
+            return;
+        }
+
+        stack<string> tempStack = myLifeEvents;
+        vector<string> events;
+
+        while (!tempStack.empty()) {
+            events.push_back(tempStack.top());
+            tempStack.pop();
+        }
+
+        reverse(events.begin(), events.end());
+        cout << "Life Events: " << endl;
+        for (const string& event : events) {
+            cout << event << endl;
+        }
+    }
+
+    void saveLifeEvents(const string& fileName) const {
+        ofstream outFile(fileName);
+        stack<string> lifeEvents = myLifeEvents;
+        vector<string> reversedEvents;
+
+        while (!lifeEvents.empty()) {
+            reversedEvents.push_back(lifeEvents.top());
+            lifeEvents.pop();
+        }
+        reverse(reversedEvents.begin(), reversedEvents.end());
+        for (const string& event : reversedEvents) {
+            outFile << event << '\n';
+        }
+        outFile.close();
+    }
+
+    void loadLifeEvents(const string& fileName) {
+        ifstream inFile(fileName);
+        if (!inFile) {
+            return;
+        }
+
+        string event;
+        while (getline(inFile, event)) {
+            myLifeEvents.push(event);
+        }
+        inFile.close();
+    }
 };
 
-// Overload << operator for UserType to enable printing
 ostream& operator<<(ostream& os, const UserType& user) {
     os << user.name;
     return os;
@@ -150,12 +221,9 @@ class SocialMediaNetwork {
     UserType* loggedInUser = nullptr;
     const string userFileName = "users.txt";
     const string friendsFileName = "friends.txt";
+    const string lifeEventsFileName = "life_events_";
 
 public:
-    void showLoggedUserName(){
-        cout << loggedInUser;
-    }
-
     SocialMediaNetwork() {
         loadUsers();
         friendships.loadAdjList(friendsFileName, users);
@@ -191,7 +259,7 @@ public:
         saveUsers();
     }
 
-    string loginUser(string userMail) {
+    bool loginUser(bool& loggedIn) {
         string email, password;
         cin.ignore(); // Clear any previous input
         cout << "Enter email: ";
@@ -202,11 +270,14 @@ public:
         if (users.find(email) != users.end() && users[email].password == password) {
             loggedInUser = &users[email];
             cout << "Login successful! Welcome, " << loggedInUser->name << endl;
+            loggedIn = true;
+            loggedInUser->loadLifeEvents(lifeEventsFileName + loggedInUser->emailID + ".txt");
         } else {
             cout << "Invalid email or password!" << endl;
+            loggedIn = false;
         }
-        userMail = email;
-        return userMail;
+
+        return loggedIn;
     }
 
     void addFriend() {
@@ -247,15 +318,45 @@ public:
         friendships.showFriendsOfFriends(*loggedInUser);
     }
 
-private:
-    void saveUsers() {
+    void addLifeEvent() {
+        if (!loggedInUser) {
+            cout << "You need to log in first!" << endl;
+            return;
+        }
+
+        string event;
+        cin.ignore(); // Clear any previous input
+        cout << "Enter life event: ";
+        getline(cin, event);
+        loggedInUser->addLifeEvent(event);
+        loggedInUser->saveLifeEvents(lifeEventsFileName + loggedInUser->emailID + ".txt");
+        cout << "Life event added successfully!" << endl;
+    }
+
+    void deleteLifeEvent() {
+        if (!loggedInUser) {
+            cout << "You need to log in first!" << endl;
+            return;
+        }
+
+        loggedInUser->deleteLifeEvent();
+        loggedInUser->saveLifeEvents(lifeEventsFileName + loggedInUser->emailID + ".txt");
+    }
+
+    void showMyLifeEvents() const {
+        if (!loggedInUser) {
+            cout << "You need to log in first!" << endl;
+            return;
+        }
+
+        loggedInUser->showAllLifeEvents();
+    }
+
+    void saveUsers() const {
         ofstream outFile(userFileName);
-        for (const auto& [email, user] : users) {
-            outFile << user.name << '\n'
-                    << user.address << '\n'
-                    << user.emailID << '\n'
-                    << user.password << '\n'
-                    << user.DOB << '\n';
+        for (const auto& pair : users) {
+            const UserType& user = pair.second;
+            outFile << user.name << '\n' << user.address << '\n' << user.emailID << '\n' << user.password << '\n' << user.DOB << '\n';
         }
         outFile.close();
     }
@@ -263,77 +364,73 @@ private:
     void loadUsers() {
         ifstream inFile(userFileName);
         if (!inFile) {
-            cout << "No existing user data found. Starting fresh." << endl;
             return;
         }
 
         string name, address, email, password, dob;
-        while (getline(inFile, name) && getline(inFile, address) &&
-               getline(inFile, email) && getline(inFile, password) &&
-               getline(inFile, dob)) {
-            UserType user(name, address, email, password, dob);
-            users[email] = user;
+        while (getline(inFile, name)) {
+            getline(inFile, address);
+            getline(inFile, email);
+            getline(inFile, password);
+            getline(inFile, dob);
+            users[email] = UserType(name, address, email, password, dob);
         }
         inFile.close();
     }
 };
 
 int main() {
-    SocialMediaNetwork network;
-    int choice;
-    bool login = false;
-    string userMail = "";
-    while (!login) {
-        cout << "***************************************" << endl;
-        cout << "|1. Register\n|2. Login \n|3. Exit\n" ;
-        cout << "***************************************"  << endl;
-        cout << "Enter your choice: ";
-        cin >> choice;
-
-        switch (choice) {
-            case 1:
-                cout << "Great! Sign Up Now:";
-                network.registerUser();
-                break;
-            case 2:
-                cout << "Great! Log In Now:";
-                network.loginUser(userMail);
-                login = true;
-                break;
-            case 3:
-                return 0;
-            default:
-                cout << "Invalid choice. Try again." << endl;
-        }
-    }
+    SocialMediaNetwork smn;
+    bool isLoggedIn = false;
 
     while (true) {
-        cout << "Welcome " << userMail;
-
-        cout << "\n3. Add Friend\n4. Show My Friends\n5. Show Friends of My Friends\n6. Exit\n";
-        cout << "Enter your choice: ";
+        int choice;
+        if (!isLoggedIn) {
+            cout << "1. Register\n2. Login\n3. Exit\nChoose an option: ";
+        } else {
+            cout << "1. Add Friend\n2. Show Friends\n3. Show Friends of Friends\n4. Add Life Event\n5. Delete Life Event\n6. Show Life Events\n7. Logout\nChoose an option: ";
+        }
         cin >> choice;
 
-        switch (choice) {
+        if (!isLoggedIn) {
+            switch (choice) {
             case 1:
-                network.registerUser();
+                smn.registerUser();
                 break;
             case 2:
-                network.loginUser(userMail);
+                smn.loginUser(isLoggedIn);
                 break;
             case 3:
-                network.addFriend();
-                break;
-            case 4:
-                network.showMyFriends();
-                break;
-            case 5:
-                network.showMyFriendsOfFriends();
-                break;
-            case 6:
                 return 0;
             default:
-                cout << "Invalid choice. Try again." << endl;
+                cout << "Invalid option! Please try again." << endl;
+            }
+        } else {
+            switch (choice) {
+            case 1:
+                smn.addFriend();
+                break;
+            case 2:
+                smn.showMyFriends();
+                break;
+            case 3:
+                smn.showMyFriendsOfFriends();
+                break;
+            case 4:
+                smn.addLifeEvent();
+                break;
+            case 5:
+                smn.deleteLifeEvent();
+                break;
+            case 6:
+                smn.showMyLifeEvents();
+                break;
+            case 7:
+                isLoggedIn = false;
+                break;
+            default:
+                cout << "Invalid option! Please try again." << endl;
+            }
         }
     }
 
