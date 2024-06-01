@@ -444,7 +444,52 @@ public:
         }
         inFile.close();
     }
+
+    void getRecentLifeEvent() const {
+        if (!loggedInUser) {
+            cout << "You need to log in first!" << endl;
+            return;
+        }
+
+        cout << loggedInUser->getRecentLifeEvent() << endl;
+    }
+
+    void showAllLifeEvents() const {
+        if (!loggedInUser) {
+            cout << "You need to log in first!" << endl;
+            return;
+        }
+
+        loggedInUser->showAllLifeEvents();
+    }
+
+    void showUserLifeEvents() {
+    if (!loggedInUser) {
+        cout << "You need to log in first!" << endl;
+        return;
+    }
+
+    string email;
+    cout << "Enter the email of the user: ";
+    cin >> email;
+
+    if (users.find(email) != users.end()) {
+        UserType& user = users.at(email);
+
+        //loading the user's life events from file by file name
+        string lifeEventsFileName = "life_events_" + email + ".txt";
+        user.loadLifeEvents(lifeEventsFileName);
+
+        user.showAllLifeEvents();
+    } else {
+        cout << "User not found!" << endl;
+    }
+}
 };
+
+
+
+
 
 int main() {
     SocialMediaNetwork smn;
@@ -453,9 +498,15 @@ int main() {
     while (true) {
         int choice;
         if (!isLoggedIn) {
-            cout << "1. Register\n2. Login\n3. Exit\nChoose an option: ";
+            cout << "\t****************************************************" << endl;
+            cout << "\t\t\t1. Register\n\t\t\t2. Login\n\t\t\t3. Exit" << endl;
+            cout << "\t****************************************************" << endl;
+            cout << "\nChoose an option: ";
         } else {
-            cout << "1. Add Friend\n2. Show Friends\n3. Show Friends of Friends\n4. Add Life Event\n5. Delete Life Event\n6. Show Life Events\n7. BFS Friends Traversal\n8. DFS Friends Traversal\n9. Logout\nChoose an option: ";
+            cout << "\t***************************************************************" << endl;
+            cout << "\t\t\t1. Add Friend\n\t\t\t2. Show Friends\n\t\t\t3. Show Friends of Friends\n\t\t\t4. Add Life Event\n\t\t\t5. Delete Life Event\n\t\t\t6. Show Life Events\n\t\t\t7. BFS Friends Traversal\n\t\t\t8. DFS Friends Traversal\n\t\t\t9. Logout" << endl ;
+            cout << "\t***************************************************************" << endl;
+            cout << "\nChoose an option: ";
         }
         cin >> choice;
 
@@ -489,9 +540,39 @@ int main() {
             case 5:
                 smn.deleteLifeEvent();
                 break;
+            //case 6:
+            //    smn.showMyLifeEvents();
+           //     break;
+
             case 6:
-                smn.showMyLifeEvents();
+                int leChoice;
+                do {
+                    cout << "\t**************************************************" << endl;
+                    cout << "\t\tWould you like to: \n\t\t1. See your most recent life event \n\t\t2. See all of your life events \n\t\t3. Show another user's life events \n\t\t4. Return to Main Menu\n";
+                    cout << "\t**************************************************" << endl;
+                    cout << "Enter Your Choice: "<< endl;
+                    cin >> leChoice;
+                    switch (leChoice) {
+                    case 1:
+                        cout << "Your Most Recent Life Event: " << endl;
+                        smn.getRecentLifeEvent();
+                        break;
+                    case 2:
+                        cout << "Your ";
+                        smn.showAllLifeEvents();
+                        break;
+                    case 3:
+                        smn.showUserLifeEvents();
+                        break;
+                    case 4:
+                        cout << "Going Back to Main Menu: " << endl;
+                        break;
+                    default:
+                        cout << "Invalid option! Please try again." << endl;
+                    }
+                } while (leChoice != 4);
                 break;
+
             case 7:
                 smn.traverseFriendsBFS();
                 break;
@@ -501,6 +582,7 @@ int main() {
             case 9:
                 isLoggedIn = false;
                 break;
+
             default:
                 cout << "Invalid option! Please try again." << endl;
             }
